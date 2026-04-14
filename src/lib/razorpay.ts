@@ -78,10 +78,24 @@ export const processPayment = async (options: Partial<RazorpayOptions>, type: 'b
       }),
     });
 
+    const contentType = orderResponse.headers.get("content-type");
     if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      throw new Error(errorData.error || 'Failed to create order');
+      let errorMessage = 'Failed to create order';
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await orderResponse.json();
+        errorMessage = errorData.error || errorMessage;
+      } else {
+        const textError = await orderResponse.text();
+        console.error('Server error (non-JSON):', textError);
+        errorMessage = `Server Error: ${orderResponse.status} ${orderResponse.statusText}`;
+      }
+      throw new Error(errorMessage);
     }
+
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error('Invalid response from server (expected JSON)');
+    }
+
     const orderData = await orderResponse.json();
 
     const razorpayOptions: RazorpayOptions = {
@@ -109,12 +123,20 @@ export const processPayment = async (options: Partial<RazorpayOptions>, type: 'b
           }),
         });
 
+        const verifyContentType = verifyResponse.headers.get("content-type");
         if (verifyResponse.ok) {
           if (options.handler) options.handler(response);
         } else {
-          const errorData = await verifyResponse.json();
-          console.error('Payment verification failed:', errorData.error);
-          throw new Error(errorData.error || 'Payment verification failed');
+          let errorMessage = 'Payment verification failed';
+          if (verifyContentType && verifyContentType.includes("application/json")) {
+            const errorData = await verifyResponse.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            const textError = await verifyResponse.text();
+            console.error('Verification error (non-JSON):', textError);
+            errorMessage = `Verification Error: ${verifyResponse.status}`;
+          }
+          throw new Error(errorMessage);
         }
       },
       prefill: options.prefill || {
