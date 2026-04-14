@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+  --color-app-bg: #ffffff;
+  --color-app-surface: #fafafa;
+  --color-app-deep: #f0f0f0;
+  --color-app-black: #000000;
+  --color-app-gray-dark: #333333;
+  --color-app-gray-light: #e5e5e5;
+
+  --shadow-neu: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-neu-inset: inset 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-app-glow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+  --radius-xl: 12px;
+  --radius-lg: 8px;
+}
+
+@layer base {
+  body {
+    @apply bg-white text-black font-sans antialiased;
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid #000000;
+    border-radius: theme(borderRadius.xl);
+  }
+
+  .neu-surface {
+    @apply bg-white border border-gray-100;
+    box-shadow: var(--shadow-neu);
+    border-radius: theme(borderRadius.xl);
+  }
+
+  .neu-surface-pressed {
+    @apply bg-gray-50 border border-gray-200;
+    box-shadow: var(--shadow-neu-inset);
+    border-radius: theme(borderRadius.xl);
+  }
+
+  .btn-primary {
+    @apply bg-black text-white rounded-xl px-6 py-3 font-bold uppercase tracking-widest text-[10px] transition-all duration-300;
+    box-shadow: var(--shadow-app-glow);
+  }
+
+  .btn-primary:hover {
+    @apply bg-gray-900 scale-[1.02];
+  }
+
+  .btn-secondary {
+    @apply bg-white text-black border border-black rounded-xl px-6 py-3 font-bold uppercase tracking-widest text-[10px] transition-all duration-300;
+  }
+
+  .neu-input {
+    @apply bg-white border border-gray-200 rounded-xl px-4 py-3 outline-none transition-all duration-200 font-medium;
+  }
+
+  .neu-input:focus {
+    @apply border-black ring-1 ring-black/5;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .premium-gradient {
+    @apply bg-black;
+  }
+
+  .gold-gradient {
+    @apply bg-black;
+  }
+}

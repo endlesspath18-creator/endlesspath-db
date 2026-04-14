@@ -1,0 +1,208 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - name: string (optional)
+    //   - email: string (optional, email format)
+    //   - phone: string (optional)
+    //   - role: string (required, ['user', 'provider', 'admin'])
+    //   - photoURL: string (optional, URL format)
+    //   - isPremium: bool (optional)
+    //   - premiumUntil: timestamp (optional)
+    //   - upiId: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: services
+    // Document ID: {serviceId}
+    // Fields:
+    //   - name: string (required)
+    //   - category: string (required)
+    //   - description: string (optional)
+    //   - price: number (required, positive)
+    //   - providerId: string (required)
+    //   - providerName: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: bookings
+    // Document ID: {bookingId}
+    // Fields:
+    //   - serviceId: string (required)
+    //   - userId: string (required)
+    //   - providerId: string (required)
+    //   - status: string (required, ['pending', 'confirmed', 'completed', 'cancelled'])
+    //   - bookingTime: timestamp (required)
+    //   - totalPrice: number (required, positive)
+    //   - paymentStatus: string (required, ['pending', 'paid', 'failed'])
+    //   - paymentId: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: transactions
+    // Document ID: {orderId}
+    // Fields:
+    //   - orderId: string (required)
+    //   - paymentId: string (optional)
+    //   - userId: string (required)
+    //   - amount: number (required)
+    //   - currency: string (required)
+    //   - status: string (required, ['created', 'paid', 'failed', 'refunded'])
+    //   - type: string (required)
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "endlesspath18@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isProvider() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'provider';
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() > 0 &&
+             data.role in ['user', 'provider', 'admin'] &&
+             (!('email' in data) || isValidEmail(data.email)) &&
+             (!('photoURL' in data) || isValidUrl(data.photoURL)) &&
+             (!('isPremium' in data) || data.isPremium is bool) &&
+             (!('providerStatus' in data) || data.providerStatus in ['pending_payment', 'pending_approval', 'approved', 'rejected']) &&
+             (!('walletBalance' in data) || data.walletBalance is number);
+    }
+
+    function isValidService(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.category is string && data.category.size() > 0 &&
+             data.price is number && data.price > 0 &&
+             data.providerId is string && data.providerId == request.auth.uid;
+    }
+
+    function isValidBooking(data) {
+      return data.serviceId is string &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.providerId is string &&
+             data.status in ['pending', 'confirmed', 'completed', 'cancelled'] &&
+             data.totalPrice is number && data.totalPrice >= 0 &&
+             (!('commissionAmount' in data) || data.commissionAmount is number) &&
+             (!('providerEarnings' in data) || data.providerEarnings is number) &&
+             data.paymentStatus in ['pending', 'paid', 'failed'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Users can only read their own profile. Admins can read all.
+      // CRITICAL: Prevent PII leak.
+      allow read: if isOwner(userId) || isAdmin();
+      
+      // Users can create their own profile. Only admins can assign 'admin' role.
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) && (request.resource.data.role != 'admin' || isAdmin()));
+      
+      // Users can update their own profile but cannot change their role unless admin.
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && 
+                        request.resource.data.role == resource.data.role) || isAdmin();
+    }
+
+    match /services/{serviceId} {
+      // Anyone authenticated can browse services.
+      allow read: if isAuthenticated();
+      
+      // Only providers can create services.
+      allow create: if isProvider() && isValidService(request.resource.data);
+      
+      // Only the provider who owns the service can update/delete it.
+      allow update: if isProvider() && resource.data.providerId == request.auth.uid && isValidService(request.resource.data);
+      allow delete: if isProvider() && resource.data.providerId == request.auth.uid;
+    }
+
+    match /bookings/{bookingId} {
+      // User who booked and the provider can read the booking.
+      // Also allow reading active bookings (pending/confirmed) for availability checks in the marketplace.
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.uid == resource.data.providerId || 
+        isAdmin() ||
+        resource.data.status in ['pending', 'confirmed']
+      );
+      
+      // Users can create bookings.
+      allow create: if isAuthenticated() && isValidBooking(request.resource.data);
+      
+      // Both user and provider can update booking status with logic.
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == resource.data.userId || request.auth.uid == resource.data.providerId || isAdmin()) &&
+        isValidBooking(request.resource.data)
+      );
+    }
+
+    match /transactions/{orderId} {
+      // Admins can read all transactions. Users/Providers can read their own.
+      allow read: if isAdmin() || (isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.providerId == request.auth.uid));
+      
+      // Allow users to create their own transactions (for wallet top-ups etc)
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || request.resource.data.providerId == request.auth.uid);
+      
+      // Only admins can update status
+      allow update: if isAdmin();
+    }
+
+    match /platformConfig/{configId} {
+      // Anyone authenticated can read config
+      allow read: if isAuthenticated();
+      // Only admins can update config
+      allow write: if isAdmin();
+    }
+
+    match /refunds/{refundId} {
+      // Only admins can manage refunds.
+      allow read, write: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

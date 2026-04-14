@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user profile information, roles, and premium status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique identifier for the user." },
+        "name": { "type": "string", "description": "Display name of the user." },
+        "email": { "type": "string", "format": "email", "description": "Email address of the user." },
+        "phone": { "type": "string", "description": "Phone number of the user." },
+        "role": { "type": "string", "enum": ["user", "provider", "admin"], "description": "Role of the user." },
+        "photoURL": { "type": "string", "format": "uri", "description": "URL to the user's profile photo." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the profile was created." },
+        "isPremium": { "type": "boolean", "description": "Whether the user has a premium subscription." },
+        "premiumUntil": { "type": "string", "format": "date-time", "description": "Timestamp when the premium subscription expires." },
+        "servicesDisabled": { "type": "boolean", "description": "Whether the user's services are disabled due to non-payment." },
+        "upiId": { "type": "string", "description": "UPI ID for providers to receive payments." },
+        "walletBalance": { "type": "number", "description": "Current balance in the user's wallet." },
+        "isVerified": { "type": "boolean", "description": "Whether the provider is verified by admin." },
+        "providerStatus": { "type": "string", "enum": ["pending_payment", "pending_approval", "approved", "rejected"], "description": "Current status of the provider onboarding." },
+        "kycDetails": {
+          "type": "object",
+          "properties": {
+            "idType": { "type": "string" },
+            "idNumber": { "type": "string" },
+            "documentUrl": { "type": "string" }
+          }
+        },
+        "bankDetails": {
+          "type": "object",
+          "properties": {
+            "accountHolder": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "ifscCode": { "type": "string" },
+            "bankName": { "type": "string" }
+          }
+        },
+        "businessDetails": {
+          "type": "object",
+          "properties": {
+            "businessName": { "type": "string" },
+            "experience": { "type": "string" },
+            "address": { "type": "string" },
+            "workingRadius": { "type": "number" },
+            "autoAccept": { "type": "boolean" }
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "notifications": {
+              "type": "object",
+              "properties": {
+                "push": { "type": "boolean" },
+                "email": { "type": "boolean" },
+                "sms": { "type": "boolean" },
+                "promotional": { "type": "boolean" }
+              }
+            },
+            "preferences": {
+              "type": "object",
+              "properties": {
+                "theme": { "type": "string", "enum": ["light", "dark", "system"] },
+                "language": { "type": "string" },
+                "fontSize": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "required": ["uid", "role"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Represents a service offered by a provider.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the service." },
+        "name": { "type": "string", "description": "Name of the service." },
+        "category": { "type": "string", "description": "Category of the service." },
+        "description": { "type": "string", "description": "Detailed description of the service." },
+        "price": { "type": "number", "description": "Price of the service." },
+        "providerId": { "type": "string", "description": "UID of the provider offering the service." },
+        "providerName": { "type": "string", "description": "Name of the provider." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the service was created." }
+      },
+      "required": ["name", "category", "price", "providerId"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Represents a booking made by a user for a service.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the booking." },
+        "serviceId": { "type": "string", "description": "ID of the service booked." },
+        "serviceName": { "type": "string", "description": "Name of the service booked." },
+        "userId": { "type": "string", "description": "UID of the user who made the booking." },
+        "userName": { "type": "string", "description": "Name of the user who made the booking." },
+        "providerId": { "type": "string", "description": "UID of the provider providing the service." },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "completed", "cancelled"], "description": "Current status of the booking." },
+        "bookingTime": { "type": "string", "format": "date-time", "description": "Scheduled time for the booking." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the booking was created." },
+        "basePrice": { "type": "number", "description": "Base price of the service." },
+        "platformFee": { "type": "number", "description": "Fee charged by the platform." },
+        "discount": { "type": "number", "description": "Discount applied to the booking." },
+        "totalPrice": { "type": "number", "description": "Total price paid for the booking." },
+        "commissionAmount": { "type": "number", "description": "Amount taken by the platform as commission." },
+        "providerEarnings": { "type": "number", "description": "Amount earned by the provider after commission." },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "failed"], "description": "Status of the payment." },
+        "paymentId": { "type": "string", "description": "Razorpay payment ID." }
+      },
+      "required": ["serviceId", "userId", "providerId", "status", "totalPrice", "paymentStatus"]
+    },
+    "PlatformConfig": {
+      "title": "Platform Configuration",
+      "description": "Global settings for the platform managed by admins.",
+      "type": "object",
+      "properties": {
+        "commissionRate": { "type": "number", "description": "Percentage taken by the platform from each booking." },
+        "providerRegistrationFee": { "type": "number", "description": "Fee charged to providers for premium registration." },
+        "maintenanceMode": { "type": "boolean", "description": "Whether the platform is in maintenance mode." },
+        "currency": { "type": "string", "description": "Default currency for the platform." },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Records all financial movements in the platform.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "providerId": { "type": "string" },
+        "amount": { "type": "number" },
+        "adminAmount": { "type": "number" },
+        "providerAmount": { "type": "number" },
+        "type": { "type": "string", "enum": ["registration", "booking", "topup", "payout"] },
+        "status": { "type": "string", "enum": ["pending", "completed", "failed"] },
+        "paymentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles."
+    },
+    "/services/{serviceId}": {
+      "schema": "Service",
+      "description": "Collection of services offered by providers."
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Collection of bookings."
+    },
+    "/platformConfig/settings": {
+      "schema": "PlatformConfig",
+      "description": "Global platform settings."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial transaction logs."
+    }
+  }
+}
