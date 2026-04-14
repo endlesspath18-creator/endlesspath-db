@@ -41,14 +41,24 @@ export const loadRazorpay = () => {
 import { auth } from '../firebase';
 
 export const processPayment = async (options: Partial<RazorpayOptions>, type: 'booking' | 'premium' | 'wallet' | 'registration', extraData?: any) => {
-  const key = (import.meta as any).env.VITE_RAZORPAY_KEY_ID || 'rzp_test_mock_key';
+  const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
   
+  if (!key || key === 'rzp_test_mock_key') {
+    console.warn('Razorpay Key ID is missing or using mock key. Payment may not open correctly.');
+  }
+
   try {
+    // Ensure Razorpay script is loaded
+    if (!window.Razorpay) {
+      const loaded = await loadRazorpay();
+      if (!loaded) throw new Error('Failed to load Razorpay SDK');
+    }
+
     const user = auth.currentUser;
     if (!user) throw new Error('User must be authenticated to process payment');
     
     const idToken = await user.getIdToken();
-    const apiUrl = (import.meta as any).env.VITE_API_URL || '';
+    const apiUrl = import.meta.env.VITE_API_URL || '';
 
     // 1. Create order on server
     const orderResponse = await fetch(`${apiUrl}/api/payments/create-order`, {

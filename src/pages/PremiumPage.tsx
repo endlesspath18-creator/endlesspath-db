@@ -40,9 +40,12 @@ export default function PremiumPage() {
   const activePlan = plans.monthly;
   const totalAmount = activePlan.price;
 
+  const [error, setError] = useState<string | null>(null);
+
   const handleSubscribe = async () => {
     if (!profile) return;
     setLoading(true);
+    setError(null);
     
     try {
       const isProviderRegistration = profile.role === 'provider' && profile.providerStatus === 'pending_payment';
@@ -86,8 +89,9 @@ export default function PremiumPage() {
         duration: 'monthly',
         amount: totalAmount
       });
-    } catch (error) {
-      console.error('Razorpay initialization error:', error);
+    } catch (err: any) {
+      console.error('Razorpay initialization error:', err);
+      setError(err.message || 'Failed to open payment gateway. Please check your connection.');
       setLoading(false);
     }
   };
@@ -162,6 +166,12 @@ export default function PremiumPage() {
       </div>
 
       <div className="space-y-4">
+        {error && (
+          <div className="p-4 rounded-2xl bg-red-50 border border-red-100 flex items-center gap-3 text-red-600 text-xs font-bold">
+            <AlertCircle size={18} />
+            <span>{error}</span>
+          </div>
+        )}
         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-widest px-2">Secure Checkout</h4>
         <div className="neu-surface p-6 space-y-4">
           <div className="flex items-center justify-between text-sm">
