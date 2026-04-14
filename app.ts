@@ -65,6 +65,7 @@ app.use(helmet({
 
 const allowedOrigins = [
   process.env.APP_URL,
+  'https://endlesspath-db.vercel.app',
   'https://phenomenal-duckanoo-7ae04d.netlify.app',
   'https://69de63614d2ceb1a41f9db60--phenomenal-duckanoo-7ae04d.netlify.app'
 ].filter(Boolean);
