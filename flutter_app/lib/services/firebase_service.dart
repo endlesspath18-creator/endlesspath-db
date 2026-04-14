@@ -71,6 +71,24 @@ class FirebaseService with ChangeNotifier {
     }
   }
 
+  Future<void> signInWithEmail(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      print("Error signing in with Email: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> signUpWithEmail(String email, String password) async {
+    try {
+      await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    } catch (e) {
+      print("Error signing up with Email: $e");
+      rethrow;
+    }
+  }
+
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();
