@@ -263,10 +263,11 @@ const useBackendHealth = () => {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const apiUrl = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
         const res = await fetch(`${apiUrl}/health`);
         setIsHealthy(res.ok);
       } catch (err) {
+        console.error('Health check failed:', err);
         setIsHealthy(false);
       }
     };

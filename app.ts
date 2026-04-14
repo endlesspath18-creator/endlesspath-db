@@ -62,8 +62,21 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
+
+const allowedOrigins = [
+  process.env.APP_URL,
+  'https://phenomenal-duckanoo-7ae04d.netlify.app',
+  'https://69de63614d2ceb1a41f9db60--phenomenal-duckanoo-7ae04d.netlify.app'
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? process.env.APP_URL : true,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10kb' }));
